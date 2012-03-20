@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models.query import QuerySet
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
 from django.core.urlresolvers import reverse
 from django.template import Context
 from django.template.loader import render_to_string
@@ -253,7 +253,8 @@ def get_formatted_messages(formats, label, context):
     return format_templates
 
 
-def send_now(users, label, extra_context=None, on_site=True, sender=None):
+def send_now(users, label, extra_context=None, on_site=True, sender=None,
+    attachments=None):
     """
     Creates a new notice.
     
@@ -329,7 +330,9 @@ def send_now(users, label, extra_context=None, on_site=True, sender=None):
             notice_type=notice_type, on_site=on_site, sender=sender)
         if should_send(user, notice_type, "1") and user.email and user.is_active: # Email
             recipients.append(user.email)
-        send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, recipients)
+        email = EmailMessage(subject, body, settings.DEFAULT_FROM_EMAIL, 
+            recipients, attachments=attachments)
+        email.send()
     
     # reset environment to original language
     activate(current_language)
@@ -356,7 +359,8 @@ def send(*args, **kwargs):
             return send_now(*args, **kwargs)
 
 
-def queue(users, label, extra_context=None, on_site=True, sender=None):
+def queue(users, label, extra_context=None, on_site=True, sender=None,
+    attachments=None):
     """
     Queue the notification in NoticeQueueBatch. This allows for large amounts
     of user notifications to be deferred to a seperate process running outside
